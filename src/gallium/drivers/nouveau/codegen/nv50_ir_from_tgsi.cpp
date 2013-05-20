@@ -224,6 +224,8 @@ unsigned int Instruction::srcMask(unsigned int s) const
       return (mask & 0x8) | ((mask & 0x7) ? 0x1 : 0x0);
    case TGSI_OPCODE_DP2:
       return 0x3;
+   case TGSI_OPCODE_DP2A:
+      return (s == 2) ? 0x1 : 0x3;
    case TGSI_OPCODE_DP3:
       return 0x7;
    case TGSI_OPCODE_DP4:
@@ -2434,8 +2436,11 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       if (dst0[3])
          loadImm(dst0[3], 1.0f);
       break;
+   case TGSI_OPCODE_DP2A:
    case TGSI_OPCODE_DP2:
       val0 = buildDot(2);
+      if (tgsi.getOpcode() == TGSI_OPCODE_DP2A)
+         mkOp2(OP_ADD, TYPE_F32, val0, val0, fetchSrc(2, 0));
       FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi)
          mkMov(dst0[c], val0);
       break;
