@@ -317,6 +317,12 @@ nvc0_rasterizer_state_create(struct pipe_context *pipe,
 
     SB_IMMED_3D(so, PIXEL_CENTER_INTEGER, !cso->half_pixel_center);
 
+    /* FIXME halfz & half_pixel_center removal, check line before */
+    so->api =
+       (!cso->half_pixel_center << 0) | // drop
+       (!cso->lower_left_origin << 1) |
+       (cso->clip_halfz << 2); // drop halfz, already implemented in upstream
+
     assert(so->size <= (sizeof(so->state) / sizeof(so->state[0])));
     return (void *)so;
 }
