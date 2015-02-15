@@ -182,7 +182,6 @@ nine_state_copy_common(struct nine_state *dst,
         }
     }
 
-
     /* Clip planes. */
     if (mask->changed.ucp) {
         for (i = 0; i < PIPE_MAX_CLIP_PLANES; ++i)
@@ -355,7 +354,6 @@ nine_state_copy_common_all(struct nine_state *dst,
     memcpy(dst->rs, src->rs, sizeof(dst->rs));
     if (apply)
         memcpy(dst->changed.rs, src->changed.rs, sizeof(dst->changed.rs));
-
 
     /* Clip planes. */
     memcpy(&dst->clip, &src->clip, sizeof(dst->clip));

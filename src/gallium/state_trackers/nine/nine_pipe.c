@@ -27,45 +27,41 @@
 #include "cso_cache/cso_context.h"
 
 void
-nine_convert_dsa_state(struct cso_context *ctx, const DWORD *rs)
+nine_convert_dsa_state(struct pipe_depth_stencil_alpha_state *dsa, const DWORD *rs)
 {
-    struct pipe_depth_stencil_alpha_state dsa;
-
-    memset(&dsa, 0, sizeof(dsa)); /* memcmp safety */
+    memset(dsa, 0, sizeof(struct pipe_depth_stencil_alpha_state));
 
     if (rs[D3DRS_ZENABLE]) {
-        dsa.depth.enabled = 1;
-        dsa.depth.writemask = !!rs[D3DRS_ZWRITEENABLE];
-        dsa.depth.func = d3dcmpfunc_to_pipe_func(rs[D3DRS_ZFUNC]);
+        dsa->depth.enabled = 1;
+        dsa->depth.writemask = !!rs[D3DRS_ZWRITEENABLE];
+        dsa->depth.func = d3dcmpfunc_to_pipe_func(rs[D3DRS_ZFUNC]);
     }
 
     if (rs[D3DRS_STENCILENABLE]) {
-        dsa.stencil[0].enabled = 1;
-        dsa.stencil[0].func = d3dcmpfunc_to_pipe_func(rs[D3DRS_STENCILFUNC]);
-        dsa.stencil[0].fail_op = d3dstencilop_to_pipe_stencil_op(rs[D3DRS_STENCILFAIL]);
-        dsa.stencil[0].zpass_op = d3dstencilop_to_pipe_stencil_op(rs[D3DRS_STENCILPASS]);
-        dsa.stencil[0].zfail_op = d3dstencilop_to_pipe_stencil_op(rs[D3DRS_STENCILZFAIL]);
-        dsa.stencil[0].valuemask = rs[D3DRS_STENCILMASK];
-        dsa.stencil[0].writemask = rs[D3DRS_STENCILWRITEMASK];
+        dsa->stencil[0].enabled = 1;
+        dsa->stencil[0].func = d3dcmpfunc_to_pipe_func(rs[D3DRS_STENCILFUNC]);
+        dsa->stencil[0].fail_op = d3dstencilop_to_pipe_stencil_op(rs[D3DRS_STENCILFAIL]);
+        dsa->stencil[0].zpass_op = d3dstencilop_to_pipe_stencil_op(rs[D3DRS_STENCILPASS]);
+        dsa->stencil[0].zfail_op = d3dstencilop_to_pipe_stencil_op(rs[D3DRS_STENCILZFAIL]);
+        dsa->stencil[0].valuemask = rs[D3DRS_STENCILMASK];
+        dsa->stencil[0].writemask = rs[D3DRS_STENCILWRITEMASK];
 
         if (rs[D3DRS_TWOSIDEDSTENCILMODE]) {
-            dsa.stencil[1].enabled = 1;
-            dsa.stencil[1].func = d3dcmpfunc_to_pipe_func(rs[D3DRS_CCW_STENCILFUNC]);
-            dsa.stencil[1].fail_op = d3dstencilop_to_pipe_stencil_op(rs[D3DRS_CCW_STENCILFAIL]);
-            dsa.stencil[1].zpass_op = d3dstencilop_to_pipe_stencil_op(rs[D3DRS_CCW_STENCILPASS]);
-            dsa.stencil[1].zfail_op = d3dstencilop_to_pipe_stencil_op(rs[D3DRS_CCW_STENCILZFAIL]);
-            dsa.stencil[1].valuemask = dsa.stencil[0].valuemask;
-            dsa.stencil[1].writemask = dsa.stencil[0].writemask;
+            dsa->stencil[1].enabled = 1;
+            dsa->stencil[1].func = d3dcmpfunc_to_pipe_func(rs[D3DRS_CCW_STENCILFUNC]);
+            dsa->stencil[1].fail_op = d3dstencilop_to_pipe_stencil_op(rs[D3DRS_CCW_STENCILFAIL]);
+            dsa->stencil[1].zpass_op = d3dstencilop_to_pipe_stencil_op(rs[D3DRS_CCW_STENCILPASS]);
+            dsa->stencil[1].zfail_op = d3dstencilop_to_pipe_stencil_op(rs[D3DRS_CCW_STENCILZFAIL]);
+            dsa->stencil[1].valuemask = dsa->stencil[0].valuemask;
+            dsa->stencil[1].writemask = dsa->stencil[0].writemask;
         }
     }
 
     if (rs[D3DRS_ALPHATESTENABLE]) {
-        dsa.alpha.enabled = 1;
-        dsa.alpha.func = d3dcmpfunc_to_pipe_func(rs[D3DRS_ALPHAFUNC]);
-        dsa.alpha.ref_value = (float)rs[D3DRS_ALPHAREF] / 255.0f;
+        dsa->alpha.enabled = 1;
+        dsa->alpha.func = d3dcmpfunc_to_pipe_func(rs[D3DRS_ALPHAFUNC]);
+        dsa->alpha.ref_value = (float)rs[D3DRS_ALPHAREF] / 255.0f;
     }
-
-    cso_set_depth_stencil_alpha(ctx, &dsa);
 }
 
 /* TODO: Keep a static copy in device so we don't have to memset every time ? */

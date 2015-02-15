@@ -170,7 +170,14 @@ update_blend(struct NineDevice9 *device)
 static INLINE void
 update_dsa(struct NineDevice9 *device)
 {
-    nine_convert_dsa_state(device->cso, device->state.rs);
+    nine_convert_dsa_state(&device->state.pipe.dsa, device->state.rs);
+    device->state.commit |= NINE_STATE_COMMIT_DSA;
+}
+
+static INLINE void
+commit_dsa(struct NineDevice9 *device)
+{
+    cso_set_depth_stencil_alpha(device->cso, &device->state.pipe.dsa);
 }
 
 static INLINE void
@@ -999,6 +1006,11 @@ nine_update_state(struct NineDevice9 *device)
     if (state->changed.vtxbuf)
         update_vertex_buffers(device);
 
+    if (state->commit & NINE_STATE_COMMIT_DSA)
+        commit_dsa(device);
+
+    state->commit = 0;
+
     device->state.changed.group &=
         (NINE_STATE_FF | NINE_STATE_VS_CONST | NINE_STATE_PS_CONST);
 
@@ -1629,3 +1641,58 @@ const char *nine_d3drs_to_string(DWORD State)
     }
 }
 
+HRESULT nine_state_set(struct NineDevice9 *This,
+                       D3DRENDERSTATETYPE State,
+                       DWORD Value)
+{
+    struct nine_state *state = This->update;
+    const DWORD *rs = state->rs;
+
+    switch (State) {
+    case D3DRS_ZENABLE:
+        if (Value) {
+            state->pipe.dsa.depth.enabled = 1;
+            state->pipe.dsa.depth.writemask = !!rs[D3DRS_ZWRITEENABLE];
+            state->pipe.dsa.depth.func = d3dcmpfunc_to_pipe_func(rs[D3DRS_ZFUNC]);
+        } else {
+            state->pipe.dsa.depth.enabled = 0;
+            state->pipe.dsa.depth.writemask = 0;
+            state->pipe.dsa.depth.func = 0;
+        }
+        state->commit |= NINE_STATE_COMMIT_DSA;
+        break;
+    case D3DRS_ZWRITEENABLE:
+        state->pipe.dsa.depth.writemask = rs[D3DRS_ZENABLE] ? !!Value : 0;
+        state->commit |= NINE_STATE_COMMIT_DSA;
+        break;
+    case D3DRS_ALPHATESTENABLE:
+        if (Value) {
+            state->pipe.dsa.alpha.enabled = 1;
+            state->pipe.dsa.alpha.func = d3dcmpfunc_to_pipe_func(rs[D3DRS_ALPHAFUNC]);
+            state->pipe.dsa.alpha.ref_value = (float)rs[D3DRS_ALPHAREF] / 255.0f;
+        } else {
+            state->pipe.dsa.alpha.enabled = 0;
+            state->pipe.dsa.alpha.func = 0;
+            state->pipe.dsa.alpha.ref_value = 0;
+        }
+        state->commit |= NINE_STATE_COMMIT_DSA;
+        break;
+    case D3DRS_ZFUNC:
+        state->pipe.dsa.depth.func = rs[D3DRS_ZENABLE] ? d3dcmpfunc_to_pipe_func(Value) : 0;
+        state->commit |= NINE_STATE_COMMIT_DSA;
+        break;
+    case D3DRS_ALPHAREF:
+        state->pipe.dsa.alpha.ref_value = rs[D3DRS_ALPHATESTENABLE] ? (float)Value / 255.0f : 0;
+        state->commit |= NINE_STATE_COMMIT_DSA;
+        break;
+    case D3DRS_ALPHAFUNC:
+        state->pipe.dsa.alpha.func = rs[D3DRS_ALPHATESTENABLE] ? d3dcmpfunc_to_pipe_func(Value) : 0;
+        state->commit |= NINE_STATE_COMMIT_DSA;
+        break;
+    default:
+        state->changed.group |= nine_render_state_group[State];
+        break;
+    }
+
+    return D3D_OK;
+}

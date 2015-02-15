@@ -2179,6 +2179,15 @@ NineDevice9_SetRenderState( struct NineDevice9 *This,
     DBG("This=%p State=%u(%s) Value=%08x\n", This,
         State, nine_d3drs_to_string(State), Value);
 
+    user_assert(State < Elements(state->rs), D3DERR_INVALIDCALL);
+
+    if (unlikely(This->is_recording)) {
+        state->rs[State] = Value;
+        state->changed.rs[State / 32] |= 1 << (State % 32);
+        state->changed.group |= nine_render_state_group[State];
+        return D3D_OK;
+    }
+
     /* Amd hacks (equivalent to GL extensions) */
     if (State == D3DRS_POINTSIZE) {
         if (Value == RESZ_CODE)
@@ -2200,12 +2209,9 @@ NineDevice9_SetRenderState( struct NineDevice9 *This,
             return D3D_OK;
     }
 
-    user_assert(State < Elements(state->rs), D3DERR_INVALIDCALL);
-
-    if (likely(state->rs[State] != Value) || unlikely(This->is_recording)) {
+    if (likely(state->rs[State] != Value)) {
         state->rs[State] = Value;
-        state->changed.rs[State / 32] |= 1 << (State % 32);
-        state->changed.group |= nine_render_state_group[State];
+        nine_state_set(This, State, Value);
     }
 
     return D3D_OK;
